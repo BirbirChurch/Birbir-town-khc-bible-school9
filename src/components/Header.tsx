@@ -1,8 +1,8 @@
 import React from 'react';
-import { BookOpen, Key, LogOut, Shield, User, Award, GraduationCap, Lock, LayoutDashboard, FileText } from 'lucide-react';
+import { Key, LogOut, Shield, User, Award, GraduationCap, Lock, Cloud, CheckCircle2, AlertTriangle, RefreshCw } from 'lucide-react';
 import { CurrentUser } from '../types.ts';
 import { FirebaseConnectionReport } from '../services/firebaseSync.ts';
-import { Cloud, CheckCircle2, AlertTriangle, RefreshCw } from 'lucide-react';
+import { CHURCH_LOGO } from '../assets/logo.ts';
 
 interface HeaderProps {
   currentUser: CurrentUser | null;
@@ -45,9 +45,11 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="flex flex-col md:flex-row justify-between items-center py-3 md:h-20 gap-3">
             {/* Logo and Titles */}
             <div className="flex items-center space-x-3.5 space-x-reverse">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 text-slate-950 flex items-center justify-center text-2xl shadow-lg border-2 border-amber-300 transform hover:scale-105 transition-transform flex-shrink-0">
-                <BookOpen className="w-6 h-6 text-slate-950 stroke-[2.5]" />
-              </div>
+              <img
+                src={CHURCH_LOGO}
+                alt="የብርብር ከተማ ቃለ ሕይወት ቤተ ክርስቲያን"
+                className="h-14 sm:h-16 w-auto object-contain rounded-xl p-1 bg-white/10 border border-amber-400/40 shadow-lg flex-shrink-0"
+              />
               <div>
                 <h1 className="text-base sm:text-lg md:text-xl font-bold leading-tight tracking-wide text-amber-300 drop-shadow-sm">
                   የብርብር ከተማ ቃለ ሕይወት ቤተ ክርስቲያን

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { BookOpen, LogIn, Shield, Award, User, GraduationCap, Lock, Cloud } from 'lucide-react';
+import { LogIn, Shield, Award, User, GraduationCap, Lock, Cloud } from 'lucide-react';
 import { CurrentUser, ProgramType, Student, UserRole } from '../types.ts';
 import { FirebaseConnectionReport } from '../services/firebaseSync.ts';
+import { CHURCH_LOGO } from '../assets/logo.ts';
 
 interface LoginViewProps {
   students: Student[];
@@ -117,8 +118,12 @@ export const LoginView: React.FC<LoginViewProps> = ({
       <div className="bg-white rounded-3xl shadow-2xl border border-slate-200/80 overflow-hidden">
         {/* Card Header with church branding */}
         <div className="bg-gradient-to-br from-emerald-950 via-emerald-900 to-slate-900 p-8 text-center text-white relative">
-          <div className="w-20 h-20 mx-auto rounded-2xl bg-gradient-to-tr from-amber-400 to-amber-500 text-slate-950 flex items-center justify-center text-4xl shadow-xl border-2 border-amber-300 mb-4 transform hover:rotate-3 transition-transform">
-            <BookOpen className="w-10 h-10 text-slate-950 stroke-[2.2]" />
+          <div className="flex justify-center mb-3">
+            <img
+              src={CHURCH_LOGO}
+              alt="የብርብር ከተማ ቃለ ሕይወት ቤተ ክርስቲያን"
+              className="h-20 sm:h-24 w-auto object-contain drop-shadow-md"
+            />
           </div>
           <h2 className="text-xl sm:text-2xl font-bold text-amber-300 tracking-wide">
             ወደ ሲስተሙ ይግቡ

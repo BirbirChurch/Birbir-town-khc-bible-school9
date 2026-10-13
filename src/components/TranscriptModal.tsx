@@ -1,8 +1,9 @@
 import React from 'react';
-import { X, Printer, BookOpen, ShieldCheck } from 'lucide-react';
+import { X, Printer, ShieldCheck } from 'lucide-react';
 import { Course, GradeBreakdown, Student } from '../types.ts';
 import { calculateGradeDetails, calculateStudentGPA, getGradeKey } from '../utils/gradeCalculations.ts';
 import { OFFICIAL_GRADING_SCALE } from '../data/initialData.ts';
+import { CHURCH_LOGO } from '../assets/logo.ts';
 
 interface TranscriptModalProps {
   student: Student;
@@ -57,7 +58,7 @@ export const TranscriptModal: React.FC<TranscriptModalProps> = ({
         <div className="bg-slate-900 text-white px-6 py-4 flex justify-between items-center no-print border-b border-slate-800">
           <div className="flex items-center gap-2">
             <Printer className="w-5 h-5 text-amber-400" />
-            <h3 className="font-bold text-sm">ይፋዊ የተማሪ የትምህርት ውጤት መግለጫ (Official Transcript)</h3>
+            <h3 className="font-bold text-sm">የትራንስክሪፕት ቅድመ-እይታ (Transcript Preview)</h3>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -80,8 +81,12 @@ export const TranscriptModal: React.FC<TranscriptModalProps> = ({
         <div className="p-8 sm:p-12 text-slate-900 bg-white" id="printable-transcript-content">
           {/* Official Letterhead Header */}
           <div className="text-center border-b-2 border-slate-900 pb-5 mb-6 relative">
-            <div className="w-16 h-16 mx-auto rounded-full bg-slate-900 text-amber-400 flex items-center justify-center text-3xl mb-3 border-2 border-amber-400 shadow-sm">
-              <BookOpen className="w-8 h-8" />
+            <div className="flex justify-center mb-3">
+              <img
+                src={CHURCH_LOGO}
+                alt="የብርብር ከተማ ቃለ ሕይወት ቤተ ክርስቲያን"
+                className="h-24 sm:h-28 w-auto object-contain drop-shadow-sm"
+              />
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-wide text-slate-900 font-serif-ethiopic">
               የብርብር ከተማ ቃለ ሕይወት ቤተ ክርስቲያን
@@ -92,11 +97,6 @@ export const TranscriptModal: React.FC<TranscriptModalProps> = ({
             <p className="text-xs uppercase font-semibold text-slate-600 mt-0.5">
               Birbir City Kale Heywet Church Bible Training School
             </p>
-            <div className="mt-3 inline-block bg-slate-100 border border-slate-400 px-4 py-1 rounded-full">
-              <p className="text-xs font-bold text-slate-900">
-                ይፋዊ የተማሪ የትምህርት ውጤት መግለጫ (OFFICIAL ACADEMIC TRANSCRIPT)
-              </p>
-            </div>
           </div>
 
           {/* Student & Term Info Grid */}
@@ -204,10 +204,9 @@ export const TranscriptModal: React.FC<TranscriptModalProps> = ({
 
             <div className="text-center space-y-2">
               <p className="text-slate-800">የተቋሙ ይፋዊ ማኅተም (Official Stamp)</p>
-              <div className="w-24 h-24 rounded-full border-2 border-dashed border-slate-500 mx-auto flex flex-col items-center justify-center text-[10px] text-slate-500 p-2 shadow-inner">
-                <BookOpen className="w-5 h-5 text-slate-400 mb-0.5" />
-                <span>ቃለ ሕይወት</span>
-                <span className="text-[8px]">ማኅተም</span>
+              <div className="w-24 h-24 rounded-full border-2 border-dashed border-slate-500 mx-auto flex flex-col items-center justify-center text-[10px] text-slate-500 p-1.5 shadow-inner">
+                <img src={CHURCH_LOGO} alt="ማኅተም" className="w-10 h-10 object-contain opacity-75" />
+                <span className="font-bold text-[9px] text-slate-700">ቃለ ሕይወት ማኅተም</span>
               </div>
             </div>
 
