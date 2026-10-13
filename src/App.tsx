@@ -607,7 +607,7 @@ export default function App() {
           <div className="flex items-center justify-center gap-2 text-[11px] text-slate-400 pt-0.5">
             <span>Birbir City Kale Heywet Church Bible Training School &copy; 2019 – 2030 ዓ.ም</span>
             <span>•</span>
-            <span className="text-amber-400 font-mono">Firebase: birbir-town-khc-bible-school9</span>
+            <span className="text-amber-400 font-mono">Firebase: birbir-town-khc-bible-sc-82849</span>
           </div>
         </div>
       </footer>
