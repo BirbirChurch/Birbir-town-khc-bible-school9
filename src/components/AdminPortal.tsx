@@ -14,10 +14,15 @@ import {
   CheckCircle2,
   FileSpreadsheet,
   Edit,
-  Trash2
+  Trash2,
+  Cloud,
+  RefreshCw,
+  UploadCloud,
+  ExternalLink
 } from 'lucide-react';
 import { GradingScaleItem, Student, Course, GradeBreakdown } from '../types.ts';
 import { OFFICIAL_GRADING_SCALE } from '../data/initialData.ts';
+import { FirebaseConnectionReport } from '../services/firebaseSync.ts';
 
 interface AdminPortalProps {
   systemLocked: boolean;
@@ -37,6 +42,11 @@ interface AdminPortalProps {
   onResetDefaults: () => void;
   onSelectPrintTranscript: (student: Student) => void;
   onSwitchView: (view: 'ADMIN' | 'DEAN' | 'REGISTRAR' | 'TEACHER' | 'STUDENT') => void;
+  firebaseReport: FirebaseConnectionReport | null;
+  isTestingFirebase: boolean;
+  onTestFirebaseConnection: () => Promise<void>;
+  onOpenFirebaseModal: () => void;
+  onPushAllToFirebase: () => Promise<void>;
 }
 
 export const AdminPortal: React.FC<AdminPortalProps> = ({
@@ -56,7 +66,12 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   onImportData,
   onResetDefaults,
   onSelectPrintTranscript,
-  onSwitchView
+  onSwitchView,
+  firebaseReport,
+  isTestingFirebase,
+  onTestFirebaseConnection,
+  onOpenFirebaseModal,
+  onPushAllToFirebase
 }) => {
   const [adminTab, setAdminTab] = useState<'security' | 'courses' | 'students' | 'teachers'>('security');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -233,41 +248,106 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
             </div>
 
             {/* Backup, Export and Reset Controls */}
-            <div className="pt-4 border-t border-slate-100">
-              <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3">
-                የመረጃ ጥበቃና አስተዳደር (Data Management)
-              </h4>
-              <div className="flex flex-wrap gap-2.5">
-                <button
-                  onClick={onExportData}
-                  className="inline-flex items-center gap-1.5 bg-slate-800 hover:bg-slate-900 text-white text-xs px-3.5 py-2 rounded-xl font-bold shadow-sm transition-colors cursor-pointer"
-                >
-                  <Download className="w-4 h-4 text-emerald-400" />
-                  <span>መረጃ ወደ ኮምፒውተር አስቀምጥ (Export JSON)</span>
-                </button>
+            <div className="pt-4 border-t border-slate-100 space-y-4">
+              <div>
+                <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                  የመረጃ ጥበቃና አስተዳደር (Local Backup & Data Management)
+                </h4>
+                <div className="flex flex-wrap gap-2.5">
+                  <button
+                    onClick={onExportData}
+                    className="inline-flex items-center gap-1.5 bg-slate-800 hover:bg-slate-900 text-white text-xs px-3.5 py-2 rounded-xl font-bold shadow-sm transition-colors cursor-pointer"
+                  >
+                    <Download className="w-4 h-4 text-emerald-400" />
+                    <span>መረጃ ወደ ኮምፒውተር አስቀምጥ (Export JSON)</span>
+                  </button>
 
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs px-3.5 py-2 rounded-xl font-bold border border-slate-300 transition-colors cursor-pointer"
-                >
-                  <Upload className="w-4 h-4 text-indigo-600" />
-                  <span>የተቀመጠ መረጃ አንብብ (Import JSON)</span>
-                </button>
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleFileChange}
-                  accept=".json"
-                  className="hidden"
-                />
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs px-3.5 py-2 rounded-xl font-bold border border-slate-300 transition-colors cursor-pointer"
+                  >
+                    <Upload className="w-4 h-4 text-indigo-600" />
+                    <span>የተቀመጠ መረጃ አንብብ (Import JSON)</span>
+                  </button>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileChange}
+                    accept=".json"
+                    className="hidden"
+                  />
 
-                <button
-                  onClick={onResetDefaults}
-                  className="inline-flex items-center gap-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs px-3.5 py-2 rounded-xl font-bold border border-rose-200 transition-colors ml-auto cursor-pointer"
-                >
-                  <RotateCcw className="w-4 h-4 text-rose-600" />
-                  <span>ወደ ነባሪ መልስ (Reset Defaults)</span>
-                </button>
+                  <button
+                    onClick={onResetDefaults}
+                    className="inline-flex items-center gap-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs px-3.5 py-2 rounded-xl font-bold border border-rose-200 transition-colors ml-auto cursor-pointer"
+                  >
+                    <RotateCcw className="w-4 h-4 text-rose-600" />
+                    <span>ወደ ነባሪ መልስ (Reset Defaults)</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Firebase Cloud Firestore Sync Card */}
+              <div className="bg-gradient-to-r from-emerald-50 via-slate-50 to-amber-50 p-4 rounded-2xl border border-emerald-200">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-2.5 bg-emerald-700 text-white rounded-xl shadow-xs">
+                      <Cloud className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h5 className="text-xs font-bold text-slate-800 flex items-center gap-2">
+                        <span>Firebase Cloud Firestore ዳታቤዝ</span>
+                        <span
+                          className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                            firebaseReport?.status === 'connected'
+                              ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                              : isTestingFirebase
+                              ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                              : 'bg-rose-100 text-rose-800 border border-rose-300'
+                          }`}
+                        >
+                          {firebaseReport?.status === 'connected'
+                            ? '● ተገናኝቷል (Connected)'
+                            : isTestingFirebase
+                            ? '◌ በመፈተሽ ላይ...'
+                            : '● አልተገናኘም (Not Connected)'}
+                        </span>
+                      </h5>
+                      <p className="text-[11px] text-slate-500 mt-0.5">
+                        {firebaseReport?.message || 'ሁሉንም የተማሪዎች፣ ኮርሶች እና ውጤቶች መረጃ ወደ Cloud Firestore ያመሳስላል'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      onClick={onTestFirebaseConnection}
+                      disabled={isTestingFirebase}
+                      className="inline-flex items-center gap-1 bg-white hover:bg-slate-100 text-slate-700 text-xs px-3 py-1.5 rounded-xl font-bold border border-slate-300 transition-colors cursor-pointer"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${isTestingFirebase ? 'animate-spin' : ''}`} />
+                      <span>{isTestingFirebase ? 'በመፈተሽ ላይ...' : 'ግንኙነት ፈትሽ'}</span>
+                    </button>
+
+                    <button
+                      onClick={onOpenFirebaseModal}
+                      className="inline-flex items-center gap-1 bg-emerald-700 hover:bg-emerald-800 text-white text-xs px-3 py-1.5 rounded-xl font-bold shadow-xs transition-colors cursor-pointer"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      <span>ዝርዝርና መፍትሔዎች</span>
+                    </button>
+
+                    {firebaseReport?.status === 'connected' && (
+                      <button
+                        onClick={onPushAllToFirebase}
+                        className="inline-flex items-center gap-1 bg-indigo-700 hover:bg-indigo-800 text-white text-xs px-3 py-1.5 rounded-xl font-bold shadow-xs transition-colors cursor-pointer"
+                      >
+                        <UploadCloud className="w-3.5 h-3.5" />
+                        <span>ወደ Cloud ላክ</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           </div>

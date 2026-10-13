@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { BookOpen, LogIn, Shield, Award, User, GraduationCap, Lock } from 'lucide-react';
+import { BookOpen, LogIn, Shield, Award, User, GraduationCap, Lock, Cloud } from 'lucide-react';
 import { CurrentUser, ProgramType, Student, UserRole } from '../types.ts';
+import { FirebaseConnectionReport } from '../services/firebaseSync.ts';
 
 interface LoginViewProps {
   students: Student[];
@@ -9,6 +10,9 @@ interface LoginViewProps {
   systemLocked: boolean;
   onLogin: (user: CurrentUser) => void;
   showNotify: (msg: string, type?: 'success' | 'error' | 'warning' | 'info') => void;
+  firebaseReport: FirebaseConnectionReport | null;
+  isTestingFirebase: boolean;
+  onOpenFirebaseModal: () => void;
 }
 
 export const LoginView: React.FC<LoginViewProps> = ({
@@ -17,7 +21,10 @@ export const LoginView: React.FC<LoginViewProps> = ({
   userPasswords,
   systemLocked,
   onLogin,
-  showNotify
+  showNotify,
+  firebaseReport,
+  isTestingFirebase,
+  onOpenFirebaseModal
 }) => {
   const [role, setRole] = useState<UserRole>('STUDENT');
   const [studentProgram, setStudentProgram] = useState<ProgramType>('Diploma');
@@ -287,6 +294,31 @@ export const LoginView: React.FC<LoginViewProps> = ({
             <LogIn className="w-4 h-4" />
             <span>ወደ ሲስተሙ ግባ</span>
           </button>
+
+          {/* Firebase Connection Quick Info */}
+          <div className="pt-2 text-center">
+            <button
+              type="button"
+              onClick={onOpenFirebaseModal}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold border transition-colors cursor-pointer ${
+                firebaseReport?.status === 'connected'
+                  ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
+                  : isTestingFirebase
+                  ? 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100'
+                  : 'bg-rose-50 text-rose-800 border-rose-300 hover:bg-rose-100'
+              }`}
+            >
+              <Cloud className="w-3.5 h-3.5" />
+              <span>
+                Firebase Cloud ሁኔታ፦{' '}
+                {firebaseReport?.status === 'connected'
+                  ? 'ተገናኝቷል (Connected)'
+                  : isTestingFirebase
+                  ? 'በመፈተሽ ላይ...'
+                  : 'አልተገናኘም (ምክንያቱን እይ)'}
+              </span>
+            </button>
+          </div>
         </form>
       </div>
     </div>

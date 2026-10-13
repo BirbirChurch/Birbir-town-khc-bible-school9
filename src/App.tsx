@@ -12,6 +12,8 @@ import { PasswordModal } from './components/PasswordModal.tsx';
 import { CourseModal } from './components/CourseModal.tsx';
 import { StudentModal } from './components/StudentModal.tsx';
 import { PhotoModal } from './components/PhotoModal.tsx';
+import { FirebaseStatusModal } from './components/FirebaseStatusModal.tsx';
+import { firebaseConfig } from './firebase.ts';
 
 import {
   PRELOADED_COURSES,
@@ -22,13 +24,16 @@ import {
 import { Course, CurrentUser, GradeBreakdown, Student, SystemNotification } from './types.ts';
 import { generateInitialSampleGrades } from './utils/gradeCalculations.ts';
 import {
+  checkFirebaseConnection,
+  pushAllStateToFirestore,
   loadInitialFromFirestore,
   syncMetaToFirestore,
   syncStudentsToFirestore,
   syncCoursesToFirestore,
   syncGradesToFirestore,
   syncPasswordsToFirestore,
-  syncPhotosToFirestore
+  syncPhotosToFirestore,
+  FirebaseConnectionReport
 } from './services/firebaseSync.ts';
 
 const DEFAULT_ACADEMIC_YEARS = [
@@ -140,44 +145,123 @@ export default function App() {
   const [photoModalStudentUid, setPhotoModalStudentUid] = useState<string | null>(null);
   const [transcriptStudent, setTranscriptStudent] = useState<Student | null>(null);
 
+  // Firebase connection and diagnostic states
+  const [firebaseReport, setFirebaseReport] = useState<FirebaseConnectionReport | null>(null);
+  const [isTestingFirebase, setIsTestingFirebase] = useState<boolean>(false);
+  const [isFirebaseModalOpen, setIsFirebaseModalOpen] = useState<boolean>(false);
+
   // Initialize and Sync from Firebase Firestore
   useEffect(() => {
     async function initFirestore() {
+      setIsTestingFirebase(true);
       try {
-        const remoteState = await loadInitialFromFirestore();
-        if (remoteState) {
-          if (remoteState.students) setStudents(remoteState.students);
-          if (remoteState.teachers) setTeachers(remoteState.teachers);
-          if (remoteState.courses) setCourses(remoteState.courses);
-          if (remoteState.grades) setGrades(remoteState.grades);
-          if (remoteState.photos) setPhotos(remoteState.photos);
-          if (remoteState.userPasswords) setUserPasswords(remoteState.userPasswords);
-          if (remoteState.availableYears) setAvailableYears(remoteState.availableYears);
-          if (typeof remoteState.systemLocked === 'boolean') setSystemLocked(remoteState.systemLocked);
-          if (typeof remoteState.gradePublished === 'boolean') setGradePublished(remoteState.gradePublished);
-          if (remoteState.currentYear) setCurrentYear(remoteState.currentYear);
-          if (remoteState.currentSemester) setCurrentSemester(remoteState.currentSemester);
-        } else {
-          // First time seeding to Firestore
-          syncMetaToFirestore({
-            systemLocked,
-            gradePublished,
-            currentYear,
-            currentSemester,
-            availableYears,
-            teachers
-          });
-          syncStudentsToFirestore(students);
-          syncCoursesToFirestore(courses);
-          syncGradesToFirestore(grades);
-          syncPasswordsToFirestore(userPasswords);
+        const report = await checkFirebaseConnection();
+        setFirebaseReport(report);
+        if (report.status === 'connected') {
+          const remoteState = await loadInitialFromFirestore();
+          if (remoteState) {
+            if (remoteState.students) setStudents(remoteState.students);
+            if (remoteState.teachers) setTeachers(remoteState.teachers);
+            if (remoteState.courses) setCourses(remoteState.courses);
+            if (remoteState.grades) setGrades(remoteState.grades);
+            if (remoteState.photos) setPhotos(remoteState.photos);
+            if (remoteState.userPasswords) setUserPasswords(remoteState.userPasswords);
+            if (remoteState.availableYears) setAvailableYears(remoteState.availableYears);
+            if (typeof remoteState.systemLocked === 'boolean') setSystemLocked(remoteState.systemLocked);
+            if (typeof remoteState.gradePublished === 'boolean') setGradePublished(remoteState.gradePublished);
+            if (remoteState.currentYear) setCurrentYear(remoteState.currentYear);
+            if (remoteState.currentSemester) setCurrentSemester(remoteState.currentSemester);
+          } else {
+            // First time seeding to Firestore
+            syncMetaToFirestore({
+              systemLocked,
+              gradePublished,
+              currentYear,
+              currentSemester,
+              availableYears,
+              teachers
+            });
+            syncStudentsToFirestore(students);
+            syncCoursesToFirestore(courses);
+            syncGradesToFirestore(grades);
+            syncPasswordsToFirestore(userPasswords);
+          }
         }
       } catch (err) {
         console.warn('Firebase sync note:', err);
+      } finally {
+        setIsTestingFirebase(false);
       }
     }
     initFirestore();
   }, []);
+
+  const handleTestFirebaseConnection = async () => {
+    setIsTestingFirebase(true);
+    try {
+      const rep = await checkFirebaseConnection();
+      setFirebaseReport(rep);
+      if (rep.status === 'connected') {
+        showNotification(rep.message || 'Firebase ተገናኝቷል!', 'success');
+      } else {
+        showNotification(rep.message || 'Firebase አልተገናኘም', 'error');
+      }
+    } catch (e: any) {
+      showNotification('ግንኙነቱን መፈተሽ አልተቻለም', 'error');
+    } finally {
+      setIsTestingFirebase(false);
+    }
+  };
+
+  const handlePushAllToFirebase = async () => {
+    showNotification('መረጃዎችን ወደ Firebase በመጫን ላይ...', 'info');
+    const result = await pushAllStateToFirestore({
+      meta: {
+        systemLocked,
+        gradePublished,
+        currentYear,
+        currentSemester,
+        availableYears,
+        teachers
+      },
+      students,
+      courses,
+      grades,
+      passwords: userPasswords,
+      photos
+    });
+
+    if (result.success) {
+      showNotification('ሁሉም መረጃዎች በስኬት ወደ Firebase ተጭነዋል!', 'success');
+    } else {
+      showNotification(`ወደ Firebase መጫን አልተቻለም፦ ${result.error}`, 'error');
+    }
+  };
+
+  const handlePullFromFirebase = async () => {
+    showNotification('መረጃዎችን ከFirebase በማውረድ ላይ...', 'info');
+    try {
+      const remoteState = await loadInitialFromFirestore();
+      if (remoteState) {
+        if (remoteState.students) setStudents(remoteState.students);
+        if (remoteState.teachers) setTeachers(remoteState.teachers);
+        if (remoteState.courses) setCourses(remoteState.courses);
+        if (remoteState.grades) setGrades(remoteState.grades);
+        if (remoteState.photos) setPhotos(remoteState.photos);
+        if (remoteState.userPasswords) setUserPasswords(remoteState.userPasswords);
+        if (remoteState.availableYears) setAvailableYears(remoteState.availableYears);
+        if (typeof remoteState.systemLocked === 'boolean') setSystemLocked(remoteState.systemLocked);
+        if (typeof remoteState.gradePublished === 'boolean') setGradePublished(remoteState.gradePublished);
+        if (remoteState.currentYear) setCurrentYear(remoteState.currentYear);
+        if (remoteState.currentSemester) setCurrentSemester(remoteState.currentSemester);
+        showNotification('የቅርብ ጊዜ መረጃዎች ከFirebase ተወስደዋል!', 'success');
+      } else {
+        showNotification('በFirebase ውስጥ የተቀመጠ መረጃ አልተገኘም', 'warning');
+      }
+    } catch (err: any) {
+      showNotification('ከFirebase ማውረድ አልተቻለም', 'error');
+    }
+  };
 
   // Save changes to localStorage and Firestore
   useEffect(() => {
@@ -485,6 +569,9 @@ export default function App() {
           setAdminActiveView('ADMIN');
           showNotification('በስኬት ወጥተዋል!', 'info');
         }}
+        firebaseReport={firebaseReport}
+        isTestingFirebase={isTestingFirebase}
+        onOpenFirebaseModal={() => setIsFirebaseModalOpen(true)}
       />
 
       {/* Main Body */}
@@ -500,6 +587,9 @@ export default function App() {
               if (user.role === 'ADMIN') setAdminActiveView('ADMIN');
             }}
             showNotify={showNotification}
+            firebaseReport={firebaseReport}
+            isTestingFirebase={isTestingFirebase}
+            onOpenFirebaseModal={() => setIsFirebaseModalOpen(true)}
           />
         ) : (
           <>
@@ -524,6 +614,11 @@ export default function App() {
                 onResetDefaults={handleResetDefaults}
                 onSelectPrintTranscript={(s) => setTranscriptStudent(s)}
                 onSwitchView={(v) => setAdminActiveView(v)}
+                firebaseReport={firebaseReport}
+                isTestingFirebase={isTestingFirebase}
+                onTestFirebaseConnection={handleTestFirebaseConnection}
+                onOpenFirebaseModal={() => setIsFirebaseModalOpen(true)}
+                onPushAllToFirebase={handlePushAllToFirebase}
               />
             )}
 
@@ -607,7 +702,7 @@ export default function App() {
           <div className="flex items-center justify-center gap-2 text-[11px] text-slate-400 pt-0.5">
             <span>Birbir City Kale Heywet Church Bible Training School &copy; 2019 – 2030 ዓ.ም</span>
             <span>•</span>
-            <span className="text-amber-400 font-mono">Firebase: birbir-town-khc-bible-sc-82849</span>
+            <span className="text-amber-400 font-mono">Firebase: {firebaseConfig.projectId}</span>
           </div>
         </div>
       </footer>
@@ -657,6 +752,18 @@ export default function App() {
           currentYear={currentYear}
           currentSemester={currentSemester}
           onClose={() => setTranscriptStudent(null)}
+        />
+      )}
+
+      {/* Firebase Diagnostics & Cloud Sync Modal */}
+      {isFirebaseModalOpen && (
+        <FirebaseStatusModal
+          report={firebaseReport}
+          isTesting={isTestingFirebase}
+          onTestConnection={handleTestFirebaseConnection}
+          onPushAllToFirebase={handlePushAllToFirebase}
+          onPullFromFirebase={handlePullFromFirebase}
+          onClose={() => setIsFirebaseModalOpen(false)}
         />
       )}
     </div>
