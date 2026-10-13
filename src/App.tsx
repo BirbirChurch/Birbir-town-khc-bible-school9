@@ -21,6 +21,15 @@ import {
 } from './data/initialData.ts';
 import { Course, CurrentUser, GradeBreakdown, Student, SystemNotification } from './types.ts';
 import { generateInitialSampleGrades } from './utils/gradeCalculations.ts';
+import {
+  loadInitialFromFirestore,
+  syncMetaToFirestore,
+  syncStudentsToFirestore,
+  syncCoursesToFirestore,
+  syncGradesToFirestore,
+  syncPasswordsToFirestore,
+  syncPhotosToFirestore
+} from './services/firebaseSync.ts';
 
 const DEFAULT_ACADEMIC_YEARS = [
   '2019', '2020', '2021', '2022', '2023', '2024',
@@ -131,28 +140,49 @@ export default function App() {
   const [photoModalStudentUid, setPhotoModalStudentUid] = useState<string | null>(null);
   const [transcriptStudent, setTranscriptStudent] = useState<Student | null>(null);
 
-  // Load persistence for lock & publish states
+  // Initialize and Sync from Firebase Firestore
   useEffect(() => {
-    try {
-      const storedLocked = localStorage.getItem('bk_systemLocked');
-      if (storedLocked !== null) setSystemLocked(storedLocked === 'true');
-
-      const storedPublished = localStorage.getItem('bk_gradePublished');
-      if (storedPublished !== null) setGradePublished(storedPublished !== 'false');
-
-      const storedYear = localStorage.getItem('bk_currentYear');
-      if (storedYear) setCurrentYear(storedYear);
-
-      const storedSemester = localStorage.getItem('bk_currentSemester');
-      if (storedSemester) setCurrentSemester(storedSemester);
-    } catch (e) {
-      console.error(e);
+    async function initFirestore() {
+      try {
+        const remoteState = await loadInitialFromFirestore();
+        if (remoteState) {
+          if (remoteState.students) setStudents(remoteState.students);
+          if (remoteState.teachers) setTeachers(remoteState.teachers);
+          if (remoteState.courses) setCourses(remoteState.courses);
+          if (remoteState.grades) setGrades(remoteState.grades);
+          if (remoteState.photos) setPhotos(remoteState.photos);
+          if (remoteState.userPasswords) setUserPasswords(remoteState.userPasswords);
+          if (remoteState.availableYears) setAvailableYears(remoteState.availableYears);
+          if (typeof remoteState.systemLocked === 'boolean') setSystemLocked(remoteState.systemLocked);
+          if (typeof remoteState.gradePublished === 'boolean') setGradePublished(remoteState.gradePublished);
+          if (remoteState.currentYear) setCurrentYear(remoteState.currentYear);
+          if (remoteState.currentSemester) setCurrentSemester(remoteState.currentSemester);
+        } else {
+          // First time seeding to Firestore
+          syncMetaToFirestore({
+            systemLocked,
+            gradePublished,
+            currentYear,
+            currentSemester,
+            availableYears,
+            teachers
+          });
+          syncStudentsToFirestore(students);
+          syncCoursesToFirestore(courses);
+          syncGradesToFirestore(grades);
+          syncPasswordsToFirestore(userPasswords);
+        }
+      } catch (err) {
+        console.warn('Firebase sync note:', err);
+      }
     }
+    initFirestore();
   }, []);
 
-  // Save changes to localStorage
+  // Save changes to localStorage and Firestore
   useEffect(() => {
     localStorage.setItem('bk_students', JSON.stringify(students));
+    syncStudentsToFirestore(students);
   }, [students]);
 
   useEffect(() => {
@@ -161,18 +191,22 @@ export default function App() {
 
   useEffect(() => {
     localStorage.setItem('bk_courses', JSON.stringify(courses));
+    syncCoursesToFirestore(courses);
   }, [courses]);
 
   useEffect(() => {
     localStorage.setItem('bk_grades', JSON.stringify(grades));
+    syncGradesToFirestore(grades);
   }, [grades]);
 
   useEffect(() => {
     localStorage.setItem('bk_photos', JSON.stringify(photos));
+    syncPhotosToFirestore(photos);
   }, [photos]);
 
   useEffect(() => {
     localStorage.setItem('bk_user_passwords', JSON.stringify(userPasswords));
+    syncPasswordsToFirestore(userPasswords);
   }, [userPasswords]);
 
   useEffect(() => {
@@ -194,6 +228,18 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('bk_currentSemester', currentSemester);
   }, [currentSemester]);
+
+  // Sync meta on meta state changes
+  useEffect(() => {
+    syncMetaToFirestore({
+      systemLocked,
+      gradePublished,
+      currentYear,
+      currentSemester,
+      availableYears,
+      teachers
+    });
+  }, [systemLocked, gradePublished, currentYear, currentSemester, availableYears, teachers]);
 
   const showNotification = (
     text: string,
@@ -242,7 +288,6 @@ export default function App() {
   // Add new teacher
   const handleAddTeacher = (newTeacherName: string) => {
     setTeachers((prev) => [newTeacherName, ...prev]);
-    // Set default password for new teacher
     setUserPasswords((prev) => ({
       ...prev,
       [newTeacherName]: 'teacher123'
@@ -304,7 +349,6 @@ export default function App() {
   // Student save
   const handleSaveStudent = (newStudent: Student) => {
     setStudents((prev) => [...prev, newStudent]);
-    // default password is student ID
     setUserPasswords((prev) => ({
       ...prev,
       [newStudent.uid]: newStudent.id
@@ -385,12 +429,18 @@ export default function App() {
         'እርግጠኛ ነዎት ሁሉንም መረጃዎች ወደ መጀመሪያው ነባሪ ሁኔታ መመለስ ይፈልጋሉ? የተቀየሩ ውጤቶችና አዳዲስ ተማሪዎች ይሰረዛሉ።'
       )
     ) {
-      setStudents(PRELOADED_STUDENTS);
-      setTeachers(PRELOADED_TEACHERS);
-      setCourses(PRELOADED_COURSES);
-      setGrades(generateInitialSampleGrades(PRELOADED_STUDENTS, PRELOADED_COURSES));
+      const defStudents = PRELOADED_STUDENTS;
+      const defTeachers = PRELOADED_TEACHERS;
+      const defCourses = PRELOADED_COURSES;
+      const defGrades = generateInitialSampleGrades(PRELOADED_STUDENTS, PRELOADED_COURSES);
+      const defPasswords = generateInitialUserPasswords();
+
+      setStudents(defStudents);
+      setTeachers(defTeachers);
+      setCourses(defCourses);
+      setGrades(defGrades);
       setPhotos({});
-      setUserPasswords(generateInitialUserPasswords());
+      setUserPasswords(defPasswords);
       setAvailableYears(DEFAULT_ACADEMIC_YEARS);
       setSystemLocked(false);
       setGradePublished(true);
@@ -554,9 +604,11 @@ export default function App() {
           <p className="text-slate-200 font-semibold">
             የብርብር ከተማ ቃለ ሕይወት ቤተ ክርስቲያን መጽሐፍ ቅዱስ ትምህርት ቤት
           </p>
-          <p className="text-[11px] text-slate-500 font-medium">
-            Birbir City Kale Heywet Church Bible Training School Management System &copy; 2019 – 2030 ዓ.ም
-          </p>
+          <div className="flex items-center justify-center gap-2 text-[11px] text-slate-400 pt-0.5">
+            <span>Birbir City Kale Heywet Church Bible Training School &copy; 2019 – 2030 ዓ.ም</span>
+            <span>•</span>
+            <span className="text-amber-400 font-mono">Firebase: birbir-town-khc-bible-school9</span>
+          </div>
         </div>
       </footer>
 
