@@ -14,6 +14,7 @@ interface LoginViewProps {
   firebaseReport: FirebaseConnectionReport | null;
   isTestingFirebase: boolean;
   onOpenFirebaseModal: () => void;
+  churchLogo?: string;
 }
 
 export const LoginView: React.FC<LoginViewProps> = ({
@@ -25,7 +26,8 @@ export const LoginView: React.FC<LoginViewProps> = ({
   showNotify,
   firebaseReport,
   isTestingFirebase,
-  onOpenFirebaseModal
+  onOpenFirebaseModal,
+  churchLogo
 }) => {
   const [role, setRole] = useState<UserRole>('STUDENT');
   const [studentProgram, setStudentProgram] = useState<ProgramType>('Diploma');
@@ -120,7 +122,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
         <div className="bg-gradient-to-br from-emerald-950 via-emerald-900 to-slate-900 p-8 text-center text-white relative">
           <div className="flex justify-center mb-3">
             <img
-              src={CHURCH_LOGO}
+              src={churchLogo || CHURCH_LOGO}
               alt="የብርብር ከተማ ቃለ ሕይወት ቤተ ክርስቲያን"
               className="h-20 sm:h-24 w-auto object-contain drop-shadow-md"
             />

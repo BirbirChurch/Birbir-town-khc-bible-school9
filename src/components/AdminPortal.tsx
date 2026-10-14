@@ -18,11 +18,13 @@ import {
   Cloud,
   RefreshCw,
   UploadCloud,
-  ExternalLink
+  ExternalLink,
+  Image as ImageIcon
 } from 'lucide-react';
 import { GradingScaleItem, Student, Course, GradeBreakdown } from '../types.ts';
 import { OFFICIAL_GRADING_SCALE } from '../data/initialData.ts';
 import { FirebaseConnectionReport } from '../services/firebaseSync.ts';
+import { DEFAULT_CHURCH_LOGO } from '../assets/logo.ts';
 
 interface AdminPortalProps {
   systemLocked: boolean;
@@ -47,6 +49,8 @@ interface AdminPortalProps {
   onTestFirebaseConnection: () => Promise<void>;
   onOpenFirebaseModal: () => void;
   onPushAllToFirebase: () => Promise<void>;
+  churchLogo: string;
+  onUpdateChurchLogo: (newLogo: string) => void;
 }
 
 export const AdminPortal: React.FC<AdminPortalProps> = ({
@@ -71,10 +75,13 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   isTestingFirebase,
   onTestFirebaseConnection,
   onOpenFirebaseModal,
-  onPushAllToFirebase
+  onPushAllToFirebase,
+  churchLogo,
+  onUpdateChurchLogo
 }) => {
   const [adminTab, setAdminTab] = useState<'security' | 'courses' | 'students' | 'teachers'>('security');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -88,6 +95,20 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
     };
     reader.readAsText(file);
     if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result as string;
+      if (dataUrl) {
+        onUpdateChurchLogo(dataUrl);
+      }
+    };
+    reader.readAsDataURL(file);
+    if (logoInputRef.current) logoInputRef.current.value = '';
   };
 
   const coreRoles = [
@@ -346,6 +367,56 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                         <span>ወደ Cloud ላክ</span>
                       </button>
                     )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Church Logo Management Card */}
+              <div className="bg-gradient-to-r from-amber-50/70 via-slate-50 to-emerald-50/70 p-4 rounded-2xl border border-amber-200/90">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-16 h-16 rounded-2xl bg-white p-1.5 border border-amber-300 shadow-sm flex items-center justify-center flex-shrink-0">
+                      <img
+                        src={churchLogo || DEFAULT_CHURCH_LOGO}
+                        alt="የቤተ ክርስቲያን አርማ"
+                        className="w-full h-full object-contain"
+                      />
+                    </div>
+                    <div>
+                      <h5 className="text-xs font-bold text-slate-800 flex items-center gap-2">
+                        <ImageIcon className="w-4 h-4 text-amber-600" />
+                        <span>የቤተ ክርስቲያኑ ይፋዊ አርማና ሎጎ (Church Official Logo)</span>
+                      </h5>
+                      <p className="text-[11px] text-slate-500 mt-0.5">
+                        ይህ ሎጎ በዋናው አርዕስት (Header)፣ በመግቢያ ገጽ (Login) እና በሁሉም ተማሪዎች ትራንስክሪፕት ላይ ይታያል።
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <input
+                      type="file"
+                      ref={logoInputRef}
+                      onChange={handleLogoUpload}
+                      accept="image/*"
+                      className="hidden"
+                    />
+                    <button
+                      onClick={() => logoInputRef.current?.click()}
+                      className="inline-flex items-center gap-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs px-3.5 py-2 rounded-xl font-bold shadow-xs transition-colors cursor-pointer"
+                    >
+                      <Upload className="w-3.5 h-3.5" />
+                      <span>አዲስ ሎጎ ጫን (Upload Logo)</span>
+                    </button>
+
+                    <button
+                      onClick={() => onUpdateChurchLogo(DEFAULT_CHURCH_LOGO)}
+                      className="inline-flex items-center gap-1.5 bg-white hover:bg-slate-100 text-slate-700 text-xs px-3 py-2 rounded-xl font-bold border border-slate-300 transition-colors cursor-pointer"
+                      title="ወደ መጀመሪያው ይፋዊ አርማ መልስ"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
+                      <span>ነባሪ አርማ (Reset)</span>
+                    </button>
                   </div>
                 </div>
               </div>

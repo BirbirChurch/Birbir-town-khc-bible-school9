@@ -14,6 +14,7 @@ import { StudentModal } from './components/StudentModal.tsx';
 import { PhotoModal } from './components/PhotoModal.tsx';
 import { FirebaseStatusModal } from './components/FirebaseStatusModal.tsx';
 import { firebaseConfig } from './firebase.ts';
+import { getStoredChurchLogo, saveChurchLogo, DEFAULT_CHURCH_LOGO } from './assets/logo.ts';
 
 import {
   PRELOADED_COURSES,
@@ -145,6 +146,9 @@ export default function App() {
   const [photoModalStudentUid, setPhotoModalStudentUid] = useState<string | null>(null);
   const [transcriptStudent, setTranscriptStudent] = useState<Student | null>(null);
 
+  // Church official emblem / logo state (supports default and custom uploaded logo)
+  const [churchLogo, setChurchLogo] = useState<string>(getStoredChurchLogo);
+
   // Firebase connection and diagnostic states
   const [firebaseReport, setFirebaseReport] = useState<FirebaseConnectionReport | null>(null);
   const [isTestingFirebase, setIsTestingFirebase] = useState<boolean>(false);
@@ -158,6 +162,18 @@ export default function App() {
         const report = await checkFirebaseConnection();
         setFirebaseReport(report);
         if (report.status === 'connected') {
+          // Check remote branding logo
+          try {
+            const { doc, getDoc } = await import('firebase/firestore');
+            const { db } = await import('./firebase.ts');
+            const brandSnap = await getDoc(doc(db, '_system_settings', 'branding'));
+            if (brandSnap.exists() && brandSnap.data()?.churchLogo) {
+              const remoteLogo = brandSnap.data()?.churchLogo;
+              setChurchLogo(remoteLogo);
+              saveChurchLogo(remoteLogo);
+            }
+          } catch (_) {}
+
           const remoteState = await loadInitialFromFirestore();
           if (remoteState) {
             if (remoteState.students) setStudents(remoteState.students);
@@ -260,6 +276,19 @@ export default function App() {
       }
     } catch (err: any) {
       showNotification('ከFirebase ማውረድ አልተቻለም', 'error');
+    }
+  };
+
+  const handleUpdateChurchLogo = async (newLogo: string) => {
+    setChurchLogo(newLogo);
+    saveChurchLogo(newLogo);
+    showNotification('የቤተ ክርስቲያኑ አርማና ሎጎ በተሳካ ሁኔታ ተቀይሯል!', 'success');
+    try {
+      const { doc, setDoc } = await import('firebase/firestore');
+      const { db } = await import('./firebase.ts');
+      await setDoc(doc(db, '_system_settings', 'branding'), { churchLogo: newLogo, updatedAt: new Date().toISOString() }, { merge: true });
+    } catch (err) {
+      console.warn('Firebase logo sync note:', err);
     }
   };
 
@@ -572,6 +601,7 @@ export default function App() {
         firebaseReport={firebaseReport}
         isTestingFirebase={isTestingFirebase}
         onOpenFirebaseModal={() => setIsFirebaseModalOpen(true)}
+        churchLogo={churchLogo}
       />
 
       {/* Main Body */}
@@ -590,6 +620,7 @@ export default function App() {
             firebaseReport={firebaseReport}
             isTestingFirebase={isTestingFirebase}
             onOpenFirebaseModal={() => setIsFirebaseModalOpen(true)}
+            churchLogo={churchLogo}
           />
         ) : (
           <>
@@ -619,6 +650,8 @@ export default function App() {
                 onTestFirebaseConnection={handleTestFirebaseConnection}
                 onOpenFirebaseModal={() => setIsFirebaseModalOpen(true)}
                 onPushAllToFirebase={handlePushAllToFirebase}
+                churchLogo={churchLogo}
+                onUpdateChurchLogo={handleUpdateChurchLogo}
               />
             )}
 
@@ -752,6 +785,7 @@ export default function App() {
           currentYear={currentYear}
           currentSemester={currentSemester}
           onClose={() => setTranscriptStudent(null)}
+          churchLogo={churchLogo}
         />
       )}
 

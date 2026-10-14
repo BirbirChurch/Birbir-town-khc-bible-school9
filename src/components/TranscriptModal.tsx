@@ -12,6 +12,7 @@ interface TranscriptModalProps {
   currentYear: string;
   currentSemester: string;
   onClose: () => void;
+  churchLogo?: string;
 }
 
 export const TranscriptModal: React.FC<TranscriptModalProps> = ({
@@ -20,7 +21,8 @@ export const TranscriptModal: React.FC<TranscriptModalProps> = ({
   grades,
   currentYear,
   currentSemester,
-  onClose
+  onClose,
+  churchLogo
 }) => {
   const studentCourses = courses.filter((c) => c.program === student.program);
   const gpa = calculateStudentGPA(student, courses, grades, currentYear, currentSemester);
@@ -83,7 +85,7 @@ export const TranscriptModal: React.FC<TranscriptModalProps> = ({
           <div className="text-center border-b-2 border-slate-900 pb-5 mb-6 relative">
             <div className="flex justify-center mb-3">
               <img
-                src={CHURCH_LOGO}
+                src={churchLogo || CHURCH_LOGO}
                 alt="የብርብር ከተማ ቃለ ሕይወት ቤተ ክርስቲያን"
                 className="h-24 sm:h-28 w-auto object-contain drop-shadow-sm"
               />

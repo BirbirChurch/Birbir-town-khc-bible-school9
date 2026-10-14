@@ -14,6 +14,7 @@ interface HeaderProps {
   firebaseReport: FirebaseConnectionReport | null;
   isTestingFirebase: boolean;
   onOpenFirebaseModal: () => void;
+  churchLogo?: string;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -25,7 +26,8 @@ export const Header: React.FC<HeaderProps> = ({
   onLogout,
   firebaseReport,
   isTestingFirebase,
-  onOpenFirebaseModal
+  onOpenFirebaseModal,
+  churchLogo
 }) => {
   const getRoleAmharicName = (role: string) => {
     switch (role) {
@@ -46,7 +48,7 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Logo and Titles */}
             <div className="flex items-center space-x-3.5 space-x-reverse">
               <img
-                src={CHURCH_LOGO}
+                src={churchLogo || CHURCH_LOGO}
                 alt="የብርብር ከተማ ቃለ ሕይወት ቤተ ክርስቲያን"
                 className="h-14 sm:h-16 w-auto object-contain rounded-xl p-1 bg-white/10 border border-amber-400/40 shadow-lg flex-shrink-0"
               />
